@@ -481,64 +481,23 @@ table(DB_cluster$cluster, all_cluster$Fraud)
 library(ROCR)
 
 
-mnistResultsDF <- data.frame(actual = mnistTest$label,
-                             fit = mnist.kknn$fit,
-                             as.data.frame(mnist.kknn$prob))
-
-plotROCs <- function(df, digitList) {
-  firstPlot <- TRUE
-  legendList <- NULL
-  for (digit in digitList) {
-    dfDigit <- df %>%
-      filter(as.character(actual) == as.character(digit) |
-               as.character(fit) == as.character(digit))  %>%
-      mutate(prediction = (as.character(actual) == as.character(fit)))
-    
-    pred <- prediction(dfDigit[,digit+3], dfDigit$prediction)
-    perf <- performance(pred, "tpr", "fpr")
-    auc <- performance(pred, "auc")
-    legendList <- append(legendList, 
-                         paste0("Digit: ",digit,", AUC: ",
-                                round(auc@y.values[[1]], digits = 4)))
-    if (firstPlot == TRUE) {
-      plot(perf, colorize = FALSE, lty = digit+1, col = digit+1)
-      firstPlot <- FALSE  
-    } else {
-      plot(perf, colorize = FALSE, add = TRUE, lty = digit+1, col = digit+1)
-    }
-  }
-  legend(x=0.4, y=0.6,
-         legend = legendList,
-         col = 1:10,
-         lty = 1:10,
-         bty = "n")
-}
-
-
-plotROCs(mnistResultsDF, 0:9)
-
-
-
-#####
-
-library(ROCR)
-p <- predict(model, newdata=subset(test,select=c(2,3,4,5,6,7,8)), type="response")
-pr <- prediction(p, test$Survived)
-prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+pred <- prediction(predicted.nb, testing_nb[,-5]) 
+#plot for NB
+prf <- performance(pred, measure = "tpr", x.measure = "fpr")
 plot(prf)
 
-auc <- performance(pr, measure = "auc")
+auc <- performance(pred, measure = "auc")
 auc <- auc@y.values[[1]]
 auc
 
 
 
 
-####### 
+################################# 
 #
-# MISC
+# 99.  MISC (export datasets)
 #
-#######
+#################################
 
 # export data to csv
 write.csv(Maestro, file = "maestro.csv", row.names = TRUE)
