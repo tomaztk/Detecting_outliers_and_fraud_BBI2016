@@ -17,12 +17,14 @@ library(neuralnet)
 library(MASS)
 library(RgoogleMaps)
 library(EMCluster)
+library(mclust)
 library(ggplot2)
 library(fpc)
 library(ROCR)
 library(lubridate)
 library(randomForest)
 library(caTools)
+
 
 
 
@@ -350,6 +352,8 @@ print(paste('Accuracy is ', 1-(mean(predicted.glm != testing_lr$Fraud))))
 table(predicted.glm, testing_lr[,5])
 
 
+rm(training_lr,testing_lr)
+
 ######################
 # 3.2. Naive Bayes
 ######################
@@ -428,26 +432,42 @@ rm(testing_rf,training_rf)
 ################################
 
 ################################
-# 3.4.1 Maximization Expectation
+# 3.4.1 Expectation-Maximization
 ################################
 library(EMCluster)
+library(mclust)
+
+all_cluster <- All_analysis[,c(2,4,6:8)]
+
+ME_mc <- Mclust(all_cluster[,1:4], 3) #presumme 3 clusters
+ME_mc <- Mclust(all_cluster[,1:4], 4) 
+ME_mc <- Mclust(all_cluster[,1:4], 5) 
+
+table(all_cluster$Fraud, ME_mc$classification)
+
+#classification for each cluster
+ME_mc$classification
 
 
+#loading for each cluster
+ME_mc$z
 
 
 ################################
-# 3.4.2 Density Based
+# 3.4.2 Density Based / eps radius
 ################################
 library(fpc)
 
+# eps is radius of neighborhood, MinPts is no of neighbors within eps
+DB_cluster <- dbscan(all_cluster[,-5], eps=0.4, MinPts=1)
+#vs
+DB_cluster <- dbscan(all_cluster[,-5], eps=0.6, MinPts=4)
 
-# eps is radius of neighborhood, MinPts is no of neighbors
-# within eps
-cluster <- dbscan(All[,-5], eps=0.6, MinPts=4)
-plot(cluster, sampleiris)
-plot(cluster, sampleiris[,c(1,4)])
-# Notice points in cluster 0 are unassigned outliers
-table(cluster$cluster, sampleiris$Species)
+plot(DB_cluster, all_cluster)
+plot(DB_cluster, all_cluster[,c(1,4)])
+
+# Cluster 0 are unassigned outliers and all fraudulent are outliers!
+table(DB_cluster$cluster, all_cluster$Fraud)
 
 
 
