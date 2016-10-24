@@ -279,7 +279,7 @@ All %>%
 names(All_analysis)
 
 # Let's make a split over all 70/30
-# I can also use k-folds, k-fold cross-validation,  bootstrapping, jagged bootstrapping, etc...
+# I can also use k-fold Cross Validation, Repeated k-fold Cross Validation, Leave One Out Cross Validation,  bootstrapping, jagged bootstrapping, etc...
 # remove target variable/label
 
 # Y <- All_analysis[,-1]
@@ -321,10 +321,18 @@ testing %>%
 # 3.1. Logistic Regression
 ############################
 
-fraud.glm = glm(formula=Fraud ~ Limit_number + Invoice_Type_ID + Invoice_Value + Country_ID, data=training, family=binomial, control = list(maxit = 50)) 
+#extract just the variables I need
+training_lr <- training[,c(2,4,6:8)]
+testing_lr <- testing[,c(2,4,6:8)]
+
+training_lr$Fraud <- factor(training_lr$Fraud)
+testing_lr$Fraud <- factor(testing_lr$Fraud)
+
+
+fraud.glm = glm(formula=Fraud ~ Limit_number + Invoice_Type_ID + Invoice_Value + Country_ID, data=training_lr, family=binomial, control = list(maxit = 50)) 
 
 #predict the outcome of the testing data and check prediction
-predicted.glm <- predict(fraud.glm, testing, type="response") 
+predicted.glm <- predict(fraud.glm, testing_lr, type="response") 
 
 summary(fraud.glm)
 
@@ -336,48 +344,84 @@ summary(fraud.glm)
 # ....
 
 predicted.glm <- ifelse(predicted.glm > 0.5,1,0)
-mean(predicted.glm != testing$Fraud)
-print(paste('Accuracy is ', 1-(mean(predicted.glm != testing$Fraud))))
+mean(predicted.glm != testing_lr$Fraud)
+print(paste('Accuracy is ', 1-(mean(predicted.glm != testing_lr$Fraud))))
+
+table(predicted.glm, testing_lr[,5])
 
 
 ######################
 # 3.2. Naive Bayes
 ######################
 
+#extract just the variables I need
+training_nb <- training[,c(2,4,6:8)]
+testing_nb <- testing[,c(2,4,6:8)]
 
-fraud.nb <- naiveBayes(Fraud~ Limit_number + Invoice_Type_ID + Invoice_Value + Country_ID, data = training)
+training_nb$Fraud <- factor(training_nb$Fraud)
+testing_nb$Fraud <- factor(testing_nb$Fraud)
+
+str(training_nb)
+str(testing_nb)
+
+fraud.nb <- naiveBayes(Fraud~ Limit_number + Invoice_Type_ID + Invoice_Value + Country_ID, data = training_nb)
 
 #predict the outcome of the testing data and check predictions
-predicted.nb <- predict(fraud.nb, testing)
+predicted.nb <- predict(fraud.nb, testing_nb[,-5]) # test without the label data
 
-table(predicted.nb, training[c(7,6,2,4)])
+#results of NB
+table(predicted.nb, testing_nb[,5])
 
+#Confusion Matrix
+confusionMatrix(predicted.nb, testing_nb[,5])
 
+ #           Accuracy: 0.9941 
+# P-Value [Acc > NIR]: 0.6767 
+
+rm(training_nb,testing_nb)
 
 #########################################
 # 3.3. Random Forest ( Decision Trees )
 #########################################
 
+#extract just the variables I need
+training_rf <- training[,c(2,4,6:8)]
+testing_rf <- testing[,c(2,4,6:8)]
+
+training_rf$Fraud <- factor(training_rf$Fraud)
+testing_rf$Fraud <- factor(testing_rf$Fraud)
 
 #fit the randomforest model
-fraud.rf <- randomForest(Fraud~Limit_number + Invoice_Type_ID + Invoice_Value + Country_ID, data = training, importance=TRUE,keep.forest=TRUE)
+fraud.rf <- randomForest(Fraud~Limit_number + Invoice_Type_ID + Invoice_Value + Country_ID, data = training_rf, importance=TRUE,keep.forest=TRUE)
 
 #print(fraud.rf)
 #finding improtant variables
 varImpPlot(fraud.rf, type=1)
 
+
 #predict the outcome of the testing data
-predicted.rf <- predict(fraud.rf, newdata=testing[ ,-1])
+predicted.rf <- predict(fraud.rf, newdata=testing_rf[ ,-5])
 
 
 # what is the proportion variation explained in the outcome of the testing data?
 # I am using precision! 1-(SSerror/SStotal)
 
-print(paste('Accuracy is ',(1-sum((testing$Fraud-predicted.rf)^2)/sum((testing$Fraud-mean(testing$Fraud))^2))))
+print(paste('Proportion of variance explained '
+            ,(1-sum((as.numeric(testing_rf$Fraud)-predicted.rf)^2)/sum((as.numeric(testing_rf$Fraud)-mean(as.numeric(testing_rf$Fraud))^2)))))
 
-# proportion of variation explained! = 37%
-#[1] 0.3705949
+# proportion of variation explained! = 32%
+#[1] 0.3254076
 
+#class error predictions are very acccurate to the fact that they are wrong!
+table(predicted.rf, testing_rf[,5])
+
+#browse the model
+confusionMatrix(predicted.rf, testing_rf[,5])
+#            Accuracy : 0.9941         
+#              95% CI : (0.979, 0.9993)
+# No Information Rate : 0.9941 
+
+rm(testing_rf,training_rf)
 
 ################################
 # 3.4. Clusters
@@ -466,3 +510,17 @@ plot(prf)
 auc <- performance(pr, measure = "auc")
 auc <- auc@y.values[[1]]
 auc
+
+
+
+
+####### 
+#
+# MISC
+#
+#######
+
+# export data to csv
+write.csv(Maestro, file = "maestro.csv", row.names = TRUE)
+write.csv(Visa, file = "visa.csv", row.names = FALSE)
+write.csv(All, file = "all.csv", row.names = FALSE)
