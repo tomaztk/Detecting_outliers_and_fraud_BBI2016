@@ -24,6 +24,7 @@ library(ROCR)
 library(lubridate)
 library(randomForest)
 library(caTools)
+library(ggmap)
 
 
 
@@ -178,6 +179,39 @@ plot_ly(Visa %>%
 plot_ly( ggplot(Visa, aes(x=Invoice_Euro, y=Country)) + geom_point() )
 
 
+### GEO SKIP!
+#since we have Long/Lat Data, we can plot on Maps
+Visa_Geo <- Visa[,c(6,9:10)]
+
+Visa_Geo <- Visa_Geo %>%
+            mutate(vof_invoice_recode = ifelse(Invoice_Euro > 0 & Invoice_Euro < 50, 1,
+                                              ifelse(Invoice_Euro >= 50 & Invoice_Euro < 100, 2,
+                                                    ifelse(Invoice_Euro >= 100 & Invoice_Euro < 200, 3, 4)
+                                                          )
+                                                    )
+                                            )
+
+
+library(ggmap)
+map <- get_map(location = 'Europe', zoom = 4)
+#map <- get_map(location = 'World', zoom = 2)
+
+
+
+mapPoints <- ggmap(map) + geom_point(aes(x = LNG, y = LAT, size = sqrt(vof_invoice_recode)), data = Visa_Geo, alpha = .5)
+mapPoints <- ggmap(map) + geom_point(aes(x = LNG, y = LAT, size = sqrt(Invoice_Euro)), data = Visa_Geo, alpha = .5)
+mapPoints <- ggmap(map) + geom_point(data=Visa_Geo, aes(x = LNG, y = LAT),alpha = 0.5, size = 4)
+
+#mapPoints <- ggmap(map) + geom_point(aes(x = LNG, y = LAT, size = vof_invoice_recode), data = Visa_Geo, alpha = .5)
+
+mapPoints
+
+#str(Visa_Geo)
+#Visa_Geo$LAT <- as.character(Visa_Geo$LAT)
+#Visa_Geo$LNG <- as.character(Visa_Geo$LNG)
+
+
+
 ######################
 #
 # 2.  Statistics 
@@ -320,7 +354,7 @@ testing %>%
     count = n())
 
 ############################
-# 3.1. Logistic Regression
+# 3.1. GLM - Regression
 ############################
 
 #extract just the variables I need
