@@ -493,7 +493,7 @@ ME_mc$z
 library(fpc)
 
 # eps is radius of neighborhood, MinPts is no of neighbors within eps
-DB_cluster <- dbscan(all_cluster[,-5], eps=0.4, MinPts=1)
+DB_cluster <- dbscan(all_cluster[,-5], eps=0.4, MinPts=2.05)
 #vs
 DB_cluster <- dbscan(all_cluster[,-5], eps=0.6, MinPts=4)
 
